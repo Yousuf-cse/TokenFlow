@@ -1,53 +1,42 @@
-import findPromptInputBox from "../utils/findPromptInputBox";
+import findPromptInputBox from "../utils/findPromptInputBox"; 
 import getPromptInputValue from "../utils/getPromptInputValue";
 import setPromptInputValue from "../utils/setPromptInputValue";
 import { findSubmitButton } from "../utils/findSubmitButton";
-import promptTrimOptimizer from "../optimizeLogics/promtTrimOptimizer";
 
 let currentButton: HTMLElement | null = null;
 let observer: MutationObserver | null = null;
 let isOptimizing = false;
 let skipNextClick = false;
 
-
 const handleSubmit = async () => {
   const inputBox = findPromptInputBox();
-  if (!inputBox) {
-    console.log("Input box not found.");
-    return;
-  }
+  if (!inputBox) return;
 
   const value = getPromptInputValue(inputBox);
-  if (!value || value.trim() === "") {
-    console.log("Prompt is empty.");
-    return;
-  }
+  if (!value.trim()) return;
 
   console.log("Original prompt:", value);
+  isOptimizing = true;
 
-    isOptimizing = true;
-    const optimized = promptTrimOptimizer(value);
+  chrome.runtime.sendMessage({ type: "optimize", prompt: value }, (response) => {
+    console.log("Optimized prompt:", response);
+    setPromptInputValue(inputBox, response);  
     isOptimizing = false;
-
-  console.log("Optimized prompt:", optimized);
-  setPromptInputValue(inputBox, optimized);
-
-  setTimeout(() => {
-    skipNextClick = true;
-    currentButton?.click();
-  }, 30);
+    setTimeout(() => {
+      skipNextClick = true;
+      currentButton?.click();
+    }, 30);
+  });
 };
 
 const handleClick = (e: MouseEvent) => {
   if (!currentButton) return;
   const target = e.target as HTMLElement;
-
   if (target === currentButton || currentButton.contains(target)) {
     if (skipNextClick) {
       skipNextClick = false;
       return;
     }
-
     e.preventDefault();
     e.stopPropagation();
     if (!isOptimizing) handleSubmit();
@@ -58,11 +47,7 @@ const handleKeydown = (e: KeyboardEvent) => {
   if (e.key === "Enter" && !e.shiftKey) {
     const inputBox = findPromptInputBox();
     if (!inputBox) return;
-
-    if (
-      document.activeElement === inputBox ||
-      inputBox.contains(document.activeElement)
-    ) {
+    if (document.activeElement === inputBox || inputBox.contains(document.activeElement)) {
       e.preventDefault();
       e.stopPropagation();
       if (!isOptimizing) handleSubmit();
@@ -72,20 +57,13 @@ const handleKeydown = (e: KeyboardEvent) => {
 
 const observeAndBind = () => {
   currentButton = findSubmitButton();
-  if (currentButton) {
-    console.log("Initial submit button detected");
-  }
-
   observer = new MutationObserver(() => {
     const found = findSubmitButton();
     if (found && found !== currentButton) {
       currentButton = found;
-      console.log("Updated submit button reference");
     }
   });
-
   observer.observe(document.body, { childList: true, subtree: true });
-
   document.addEventListener("click", handleClick, true);
   document.addEventListener("keydown", handleKeydown, true);
 };
@@ -105,13 +83,9 @@ window.addEventListener("beforeunload", cleanup);
 
 chrome.runtime.sendMessage({ type: "start-extension" }, (response) => {
   if (chrome.runtime.lastError) {
-    console.log("[error from content] start message failed:", chrome.runtime.lastError.message);
+    console.log("[error] start message failed:", chrome.runtime.lastError.message);
     return;
   }
-
-  if (response?.success) {
-    console.log("Model warmup successful.");
-  } else {
-    console.warn("Model warmup failed or unacknowledged.");
-  }
+  if (response?.success) console.log("success from background.");
+  else console.log("error from background");
 });
