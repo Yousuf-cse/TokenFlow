@@ -13,7 +13,6 @@ export default function Popup() {
 
     chrome.storage.local.get(["dailyTokenSavings"], (result) => {
       const saved = result.dailyTokenSavings || {};
-
       setAllTokens(saved);
       setTodayTokens(saved[today] || 0);
     });
@@ -27,18 +26,18 @@ export default function Popup() {
   return (
     <div className="p-4 w-[380px] h-[500px] flex flex-col justify-between bg-white dark:bg-black text-black dark:text-white">
       <div>
-        <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">
+        <h1 className="text-2xl font-bold mb-4 flex items-center gap-2 text-green-700 dark:text-green-400">
           <Leaf className="text-green-500" /> Carbon Snapshot
         </h1>
 
-        <Card className="mb-4">
+        <Card className="mb-4 bg-green-50 dark:bg-green-900 border-none shadow-none">
           <CardContent className="p-4 space-y-3 text-sm">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <Flame className="text-red-500 w-4 h-4" />
                 CO₂ Saved
               </span>
-              <span className="font-semibold">
+              <span className="font-semibold text-green-600 dark:text-green-300">
                 {todayTokens > 0 ? (todayTokens * 0.2).toFixed(2) : "0.0"} g
               </span>
             </div>
@@ -48,7 +47,7 @@ export default function Popup() {
                 <Droplet className="text-blue-500 w-4 h-4" />
                 Water Saved
               </span>
-              <span className="font-semibold">
+              <span className="font-semibold text-green-600 dark:text-green-300">
                 {todayTokens > 0 ? (todayTokens * 0.05).toFixed(2) : "0.0"} L
               </span>
             </div>
@@ -58,7 +57,7 @@ export default function Popup() {
                 <BarChart className="text-yellow-500 w-4 h-4" />
                 Energy Saved
               </span>
-              <span className="font-semibold">
+              <span className="font-semibold text-green-600 dark:text-green-300">
                 {todayTokens > 0 ? (todayTokens * 0.03).toFixed(2) : "0.0"} Wh
               </span>
             </div>
@@ -66,7 +65,11 @@ export default function Popup() {
         </Card>
 
         <p className="text-sm text-muted-foreground">
-          You've saved {todayTokens} tokens today. Keep going green! 🌱
+          You've saved{" "}
+          <span className="font-medium text-green-700 dark:text-green-300">
+            {todayTokens}
+          </span>{" "}
+          tokens today. Keep going green! 🌱
         </p>
       </div>
 
