@@ -1,4 +1,4 @@
-import promptTrimOptimizer from "../optimizeLogics/promtTrimOptimizer";
+import superOptimizePrompt from "@/PromptOptimizer/superOptimizePrompt";
 
 chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
   if (message.type === "start-extension") {
@@ -9,7 +9,7 @@ chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
 
   if (message.type === "optimize") {
     try {
-      const output = promptTrimOptimizer(message.prompt);
+      const output = superOptimizePrompt(message.prompt);
       sendResponse(output || message.prompt);
     } catch (err) {
       console.log("Error in background.js while optimizing:", err);

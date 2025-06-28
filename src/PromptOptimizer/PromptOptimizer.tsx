@@ -63,7 +63,7 @@ const smartTokenize = (text: string): string[] => {
     for (let i = 0; i < words.length; i++) {
       const word = words[i];
       const nextWord = words[i + 1];
-      const prevWord = words[i - 1];
+      // const prevWord = words[i - 1];
 
       // Skip fillers and personal pronouns (with exceptions)
       if (FILLERS.has(word) || PERSONAL_PRONOUNS.has(word)) {
@@ -309,7 +309,7 @@ const superOptimizePrompt = (rawInput: string): OptimizationResult => {
     // Capitalize sentences properly
     result = result.replace(
       /(^|\. )([a-z])/g,
-      (match, prefix, letter) => prefix + letter.toUpperCase()
+      (_, prefix, letter) => prefix + letter.toUpperCase()
     );
 
     // Use original if optimization made it too short or unclear
@@ -363,8 +363,8 @@ const SuperPromptOptimizer: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showStats, setShowStats] = useState<boolean>(true);
   const [showTokens, setShowTokens] = useState<boolean>(false);
-  const [selectedTokenMethod, setSelectedTokenMethod] =
-    useState<TokenizationMethod>("WORD");
+  // const [selectedTokenMethod, _] =
+  //   useState<TokenizationMethod>("WORD");
   const [copyFeedback, setCopyFeedback] = useState<string>("");
 
   const handleOptimize = (): void => {
@@ -420,7 +420,7 @@ function getData() {
   const inputWordCount: number = input
     .split(/\s+/)
     .filter((w) => w.length > 0).length;
-  const inputTokens: string[] = safeTokenize(input, selectedTokenMethod);
+  // const _: string[] = safeTokenize(input, selectedTokenMethod);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 flex items-center justify-center p-4">
