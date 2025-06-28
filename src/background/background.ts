@@ -1,4 +1,12 @@
-import superOptimizePrompt from "@/PromptOptimizer/superOptimizePrompt";
+import superOptimizePrompt from "../PromptOptimizer/superOptimizePrompt";
+
+const simpleTokenCount = (text: string): number => {
+  return text
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .filter(Boolean).length;
+};
 
 chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
   if (message.type === "start-extension") {
@@ -9,13 +17,30 @@ chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
 
   if (message.type === "optimize") {
     try {
-      const output = superOptimizePrompt(message.prompt);
-      console.log("Out Put <=======> : ", output);
-      sendResponse(output.optimized || message.prompt);
+      const originalPrompt = message.prompt;
+      const output = superOptimizePrompt(originalPrompt);
+      const optimizedPrompt = output.optimized || originalPrompt;
+
+      const originalTokenCount = simpleTokenCount(originalPrompt);
+      const optimizedTokenCount = simpleTokenCount(optimizedPrompt);
+      const tokensSaved = Math.max(0, originalTokenCount - optimizedTokenCount);
+
+      const today = new Date().toISOString().split("T")[0];
+
+      chrome.storage.local.get(["dailyTokenSavings"], (result) => {
+        const current = result.dailyTokenSavings || {};
+        current[today] = (current[today] || 0) + tokensSaved;
+
+        chrome.storage.local.set({ dailyTokenSavings: current }, () => {
+          console.log(`Saved ${tokensSaved} tokens on ${today}`);
+        });
+      });
+
+      sendResponse(optimizedPrompt);
     } catch (err) {
-      console.log("Error in background.js while optimizing:", err);
+      console.error("Error during optimization:", err);
       sendResponse(message.prompt);
     }
-    return;
+    return true;
   }
 });
