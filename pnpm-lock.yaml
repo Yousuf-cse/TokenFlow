@@ -20,6 +20,12 @@ importers:
       tailwindcss:
         specifier: ^4.1.11
         version: 4.1.11
+      wink-eng-lite-web-model:
+        specifier: ^1.8.1
+        version: 1.8.1
+      wink-nlp:
+        specifier: ^2.3.2
+        version: 2.3.2
     devDependencies:
       '@eslint/js':
         specifier: ^9.29.0
@@ -1331,6 +1337,13 @@ packages:
     engines: {node: '>= 8'}
     hasBin: true
 
+  wink-eng-lite-web-model@1.8.1:
+    resolution: {integrity: sha512-M2tSOU/rVNkDj8AS8IoKJaM7apJJjS0cN+hE8CPazfnB4A/ojyc9+7RMPk18UOiIdSyWk7MR6w8z9lWix2l5tA==}
+    engines: {node: '>=16.0.0'}
+
+  wink-nlp@2.3.2:
+    resolution: {integrity: sha512-PsK/nOjI0nfC23HbpJa/eeca+wvmx2SVvH2hIhOJSDe0hbsyOwwImmRgYvv6BwsGN7/8aCHoeNzCac9xAsrvaw==}
+
   word-wrap@1.2.5:
     resolution: {integrity: sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==}
     engines: {node: '>=0.10.0'}
@@ -2495,6 +2508,10 @@ snapshots:
   which@2.0.2:
     dependencies:
       isexe: 2.0.0
+
+  wink-eng-lite-web-model@1.8.1: {}
+
+  wink-nlp@2.3.2: {}
 
   word-wrap@1.2.5: {}
 
