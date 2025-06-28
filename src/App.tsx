@@ -1,6 +1,6 @@
 import { HashRouter, Routes, Route } from "react-router-dom";
-import Popup from "./pages/Popup";
 import Dashboard from "./pages/Dashboard";
+import Popup from "./pages/Popup";
 
 export default function App() {
   return (
