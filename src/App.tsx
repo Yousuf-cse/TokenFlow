@@ -1,8 +1,14 @@
-function App() {
+import { HashRouter, Routes, Route } from "react-router-dom";
+import Dashboard from "./pages/Dashboard";
+import Popup from "./pages/Popup";
 
+export default function App() {
   return (
-    <>Hello From Extention</>
-  )
+    <HashRouter>
+      <Routes>
+        <Route path="/" element={<Popup />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </HashRouter>
+  );
 }
-
-export default App

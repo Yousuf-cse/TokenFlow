@@ -10,7 +10,8 @@ chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
   if (message.type === "optimize") {
     try {
       const output = superOptimizePrompt(message.prompt);
-      sendResponse(output || message.prompt);
+      console.log("Out Put <=======> : ", output);
+      sendResponse(output.optimized || message.prompt);
     } catch (err) {
       console.log("Error in background.js while optimizing:", err);
       sendResponse(message.prompt);
