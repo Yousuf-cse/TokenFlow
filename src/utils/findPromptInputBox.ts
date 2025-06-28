@@ -57,7 +57,7 @@ const findPromptInputBox = (): HTMLTextAreaElement | HTMLInputElement | HTMLElem
   if (scored.length > 0) return scored[0].el;
 
   // ---------- HARDCODED FALLBACKS FOR KNOWN AI PLATFORMS ----------
-
+  // This will make us sure that we atleast defenetly work in those website
   // ChatGPT
   const chatgpt = document.querySelector('.ProseMirror#prompt-textarea');
   if (chatgpt instanceof HTMLElement && chatgpt.isContentEditable) return chatgpt;
