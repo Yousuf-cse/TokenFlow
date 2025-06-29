@@ -9,7 +9,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Popup />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/ai" element={<SuperPromptOptimizer/>}/>
+        <Route path="/ai" element={<SuperPromptOptimizer />} />
       </Routes>
     </HashRouter>
   );

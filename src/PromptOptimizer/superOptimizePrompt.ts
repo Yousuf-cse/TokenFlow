@@ -8,7 +8,18 @@ import type { TokenAnalysis } from "../@types/interface/tokenAnalysis.interface"
 import type { OptimizationResult } from "../@types/interface/optimizationResult.interface";
 import type { OptimizationStats } from "../@types/interface/optimization.interface";
 import { isLikelyCode } from "./isLikelyCode";
-import { maskSecrets } from "./maskSecrets";
+// import { maskSecrets } from "./maskSecrets";
+import {
+  detectAndMaskSecrets,
+  type SecretDetection,
+} from "./detectAndMaskSecrets";
+
+// Check if sentence should be preserved (2-5 words)
+const shouldPreserveSentence = (sentence: string): boolean => {
+  const words = sentence.trim().match(/\b\w+\b/g) || [];
+  return words.length >= 2 && words.length <= 5;
+};
+
 const removeRedundantPhrases = (text: string): string => {
   let result = text;
   for (const [verbose, concise] of REDUNDANT_PHRASES) {
@@ -51,6 +62,14 @@ const smartTokenize = (text: string): string[] => {
   const optimizedSentences: string[] = [];
 
   for (let sentence of sentences) {
+    const trimmedSentence = sentence.trim();
+
+    // Preserve short sentences (2-5 words) without optimization
+    if (shouldPreserveSentence(trimmedSentence)) {
+      optimizedSentences.push(trimmedSentence);
+      continue;
+    }
+
     const words = sentence.toLowerCase().match(/\b[\w']+\b/g) || [];
     const tokens: string[] = [];
 
@@ -259,6 +278,48 @@ const analyzeTokens = (
 
 // Main optimization function with comprehensive token analysis
 const superOptimizePrompt = (rawInput: string): OptimizationResult => {
+  if (!rawInput) {
+    return {
+      optimized: "",
+      stats: {
+        originalWords: 0,
+        optimizedWords: 0,
+        reduction: 0,
+        linesProcessed: 0,
+        codeLines: 0,
+        secretsMasked: 0,
+        totalLines: 0,
+        preservedLines: 0,
+        efficiency: 100,
+        tokens: {},
+        originalChars: 0,
+        optimizedChars: 0,
+        charReduction: 0,
+      },
+      detections: [],
+    };
+  }
+  if (!rawInput) {
+    return {
+      optimized: "",
+      stats: {
+        originalWords: 0,
+        optimizedWords: 0,
+        reduction: 0,
+        linesProcessed: 0,
+        codeLines: 0,
+        secretsMasked: 0,
+        totalLines: 0,
+        preservedLines: 0,
+        efficiency: 100,
+        tokens: {},
+        originalChars: 0,
+        optimizedChars: 0,
+        charReduction: 0,
+      },
+      detections: [],
+    };
+  }
   const lines = rawInput.split("\n");
   const output: string[] = [];
   let originalWords = 0;
@@ -266,51 +327,68 @@ const superOptimizePrompt = (rawInput: string): OptimizationResult => {
   let linesProcessed = 0;
   let codeLines = 0;
   let secretsMasked = 0;
+  let preservedLines = 0; // Track preserved short sentences
+  const allSecretDetections: SecretDetection[] = [];
 
-  for (let line of lines) {
-    const trimmed = line.trim();
-    originalWords += (trimmed.match(/\b\w+\b/g) || []).length;
+  for (let i = 0; i < lines.length; i++) {
+    // Removed unused variable 'line'
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      originalWords += (trimmed.match(/\b\w+\b/g) || []).length;
 
-    if (!trimmed) {
-      output.push("");
-      continue;
+      if (!trimmed) {
+        output.push("");
+        continue;
+      }
+
+      if (isLikelyCode(trimmed)) {
+        const { maskedText, detections } = detectAndMaskSecrets(trimmed, i + 1);
+        console.log("Detection <=======", detections);
+        allSecretDetections.push(...detections);
+
+        if (detections.length > 0) secretsMasked += detections.length;
+        output.push(maskedText);
+        codeLines++;
+        optimizedWords += (maskedText.match(/\b\w+\b/g) || []).length;
+        continue;
+      }
+
+      // Check if the entire line should be preserved (2-5 words)
+      const trimm = lines[i].trim();
+      if (shouldPreserveSentence(trimm)) {
+        output.push(trimm);
+        optimizedWords += (trimm.match(/\b\w+\b/g) || []).length;
+        preservedLines++;
+        continue;
+      }
+
+      linesProcessed++;
+
+      // Multi-pass optimization
+      const sentences = smartTokenize(trimmed);
+      const collapsed = collapseRedundancy(sentences);
+
+      let result = collapsed.join(". ");
+
+      // Final cleanup
+      result = result
+        .replace(/\s+/g, " ")
+        .replace(/\s([.,!?;:])/g, "$1")
+        .replace(/\bi\b/g, "I")
+        .trim();
+
+      // Capitalize sentences properly
+      result = result.replace(
+        /(^|\. )([a-z])/g,
+        (_, prefix, letter) => prefix + letter.toUpperCase()
+      );
+
+      // Use original if optimization made it too short or unclear
+      const finalResult =
+        result.length < 3 || result.split(" ").length < 2 ? trimmed : result;
+      output.push(finalResult);
+      optimizedWords += (finalResult.match(/\b\w+\b/g) || []).length;
     }
-
-    if (isLikelyCode(trimmed)) {
-      const masked = maskSecrets(trimmed);
-      if (masked !== trimmed) secretsMasked++;
-      output.push(masked);
-      codeLines++;
-      optimizedWords += (masked.match(/\b\w+\b/g) || []).length;
-      continue;
-    }
-
-    linesProcessed++;
-
-    // Multi-pass optimization
-    const sentences = smartTokenize(trimmed);
-    const collapsed = collapseRedundancy(sentences);
-
-    let result = collapsed.join(". ");
-
-    // Final cleanup
-    result = result
-      .replace(/\s+/g, " ")
-      .replace(/\s([.,!?;:])/g, "$1")
-      .replace(/\bi\b/g, "I")
-      .trim();
-
-    // Capitalize sentences properly
-    result = result.replace(
-      /(^|\. )([a-z])/g,
-      (_, prefix, letter) => prefix + letter.toUpperCase()
-    );
-
-    // Use original if optimization made it too short or unclear
-    const finalResult =
-      result.length < 3 || result.split(" ").length < 2 ? trimmed : result;
-    output.push(finalResult);
-    optimizedWords += (finalResult.match(/\b\w+\b/g) || []).length;
   }
 
   const optimizedText = output.join("\n").trim();
@@ -329,6 +407,7 @@ const superOptimizePrompt = (rawInput: string): OptimizationResult => {
     codeLines,
     secretsMasked,
     totalLines: lines.length,
+    preservedLines, // Add preserved lines to stats
     efficiency:
       optimizedWords > 0
         ? Math.round((optimizedWords / originalWords) * 100)
@@ -348,6 +427,7 @@ const superOptimizePrompt = (rawInput: string): OptimizationResult => {
   return {
     optimized: optimizedText,
     stats,
+    detections: allSecretDetections,
   };
 };
 

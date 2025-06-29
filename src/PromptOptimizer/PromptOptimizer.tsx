@@ -1,20 +1,86 @@
 import React, { useState } from "react";
-import { FILLERS } from "./fillers";
-import { REDUNDANT_PHRASES } from "./redundant.phase";
-import { ACTION_VERBS } from "./actions.verbs";
-import { PERSONAL_PRONOUNS } from "./personalPronouns";
-import { WEAK_VERBS } from "./weak.verb";
-import type { TokenizationMethod } from "../@types/type/tokenizationMethod.types";
-import type { TokenAnalysis } from "../@types/interface/tokenAnalysis.interface";
-import type { OptimizationResult } from "../@types/interface/optimizationResult.interface";
-import type { OptimizationStats } from "../@types/interface/optimization.interface";
-import { isLikelyCode } from "./isLikelyCode";
-import { maskSecrets } from "./maskSecrets";
-// Enhanced code detection with more patterns
+import { AlertTriangle, Shield, Eye, EyeOff, X } from "lucide-react";
+import {
+  detectAndMaskSecrets,
+  type SecretDetection,
+} from "./detectAndMaskSecrets";
 
-// Enhanced secret masking with more patterns
+// Mock data for demonstration
+const FILLERS = new Set([
+  "um",
+  "uh",
+  "like",
+  "you know",
+  "basically",
+  "actually",
+]);
+const REDUNDANT_PHRASES = [
+  ["I just wanted to ask if you could", "Please"],
+  ["it would be really great if", "please"],
+  ["I think it would be", ""],
+  ["maybe take a look at", "analyze"],
+  ["possibly generate some", "generate"],
+];
+const ACTION_VERBS = ["analyze", "create", "generate", "process", "optimize"];
+const PERSONAL_PRONOUNS = new Set(["i", "you", "we", "they"]);
+const WEAK_VERBS = {
+  is: "represents",
+  was: "became",
+  are: "exist",
+  were: "became",
+};
 
-// Remove redundant phrases with case insensitive matching
+// type TokenizationMethod =
+//   | "WORD"
+//   | "GPT_APPROX"
+//   | "CHARACTER"
+//   | "SENTENCE"
+//   | "SUBWORD";
+
+interface TokenAnalysis {
+  original: number;
+  optimized: number;
+  reduction: number;
+  tokens: {
+    original: string[];
+    optimized: string[];
+  };
+}
+
+interface OptimizationStats {
+  originalWords: number;
+  optimizedWords: number;
+  reduction: number;
+  linesProcessed: number;
+  codeLines: number;
+  secretsMasked: number;
+  totalLines: number;
+  efficiency: number;
+  tokens: Record<string, TokenAnalysis>;
+  originalChars: number;
+  optimizedChars: number;
+  charReduction: number;
+  preservedLines: number;
+}
+
+interface OptimizationResult {
+  optimized: string;
+  stats: OptimizationStats;
+}
+
+const isLikelyCode = (text: string): boolean => {
+  const codePatterns = [
+    /^\s*(const|let|var|function|class|import|export)/,
+    /^\s*[a-zA-Z_][a-zA-Z0-9_]*\s*[=:]/,
+    /^\s*[{}[\]();]/,
+    /API_KEY|SECRET|TOKEN/i,
+  ];
+  return codePatterns.some((pattern) => pattern.test(text));
+};
+
+// Enhanced secret detection with detailed information
+
+// Rest of the optimization functions (simplified for demo)
 const removeRedundantPhrases = (text: string): string => {
   let result = text;
   for (const [verbose, concise] of REDUNDANT_PHRASES) {
@@ -27,15 +93,11 @@ const removeRedundantPhrases = (text: string): string => {
   return result.replace(/\s+/g, " ").trim();
 };
 
-// Smart sentence reconstruction with better flow
 const reconstructSentence = (tokens: string[]): string => {
   if (tokens.length === 0) return "";
-
-  // Prioritize action verbs at the beginning
   const actionVerbIndex = tokens.findIndex((token) =>
     ACTION_VERBS.includes(token.toLowerCase())
   );
-
   if (actionVerbIndex > 0) {
     const actionVerb = tokens[actionVerbIndex];
     const remaining = [
@@ -44,15 +106,11 @@ const reconstructSentence = (tokens: string[]): string => {
     ];
     tokens = [actionVerb, ...remaining];
   }
-
   return tokens.join(" ");
 };
 
-// Advanced tokenization with improved context awareness
 const smartTokenize = (text: string): string[] => {
   text = removeRedundantPhrases(text);
-
-  // Split into sentences first for better context
   const sentences = text.split(/[.!?]+/).filter((s) => s.trim());
   const optimizedSentences: string[] = [];
 
@@ -63,11 +121,8 @@ const smartTokenize = (text: string): string[] => {
     for (let i = 0; i < words.length; i++) {
       const word = words[i];
       const nextWord = words[i + 1];
-      // const prevWord = words[i - 1];
 
-      // Skip fillers and personal pronouns (with exceptions)
       if (FILLERS.has(word) || PERSONAL_PRONOUNS.has(word)) {
-        // Keep personal pronouns if they're subjects of action verbs
         if (
           PERSONAL_PRONOUNS.has(word) &&
           nextWord &&
@@ -78,7 +133,6 @@ const smartTokenize = (text: string): string[] => {
         continue;
       }
 
-      // Skip common articles and prepositions unless contextually important
       if (
         [
           "the",
@@ -102,13 +156,12 @@ const smartTokenize = (text: string): string[] => {
           ["in", "on", "at", "to", "for", "with", "by"].includes(word) &&
           nextWord
         ) {
-          tokens.push(word); // Keep prepositions with objects
+          tokens.push(word);
         }
         continue;
       }
 
-      // Replace weak verbs with strong alternatives
-      const strongVerb = WEAK_VERBS[word];
+      const strongVerb = WEAK_VERBS[word as keyof typeof WEAK_VERBS];
       tokens.push(strongVerb || word);
     }
 
@@ -120,12 +173,10 @@ const smartTokenize = (text: string): string[] => {
   return optimizedSentences;
 };
 
-// Remove consecutive duplicates and clean up
 const collapseRedundancy = (sentences: string[]): string[] => {
   return sentences
     .filter((sentence) => sentence.length > 2)
     .map((sentence) => {
-      // Remove word-level duplicates within sentence
       const words = sentence.split(" ");
       const unique: string[] = [];
       let prev = "";
@@ -142,129 +193,11 @@ const collapseRedundancy = (sentences: string[]): string[] => {
     .filter((sentence) => sentence.length > 0);
 };
 
-// Advanced tokenization methods
-const TokenizationMethods: Record<
-  TokenizationMethod,
-  (text: string) => string[]
-> = {
-  // Simple word-based tokenization
-  WORD: (text: string) => text.match(/\b\w+\b/g) || [],
-
-  // GPT-style tokenization (approximation)
-  GPT_APPROX: (text: string) => {
-    // Approximate GPT tokenization: ~4 chars per token on average
-    // This is a simplified approximation for demonstration
-    const chunks: string[] = [];
-    let current = "";
-
-    for (let i = 0; i < text.length; i++) {
-      current += text[i];
-
-      // Break on whitespace or punctuation boundaries
-      if (
-        /\s/.test(text[i]) ||
-        /[.,!?;:]/.test(text[i]) ||
-        current.length >= 4
-      ) {
-        if (current.trim()) chunks.push(current.trim());
-        current = "";
-      }
-    }
-    if (current.trim()) chunks.push(current.trim());
-    return chunks;
-  },
-
-  // Character-based tokenization
-  CHARACTER: (text: string) => text.split(""),
-
-  // Sentence-based tokenization
-  SENTENCE: (text: string) => text.split(/[.!?]+/).filter((s) => s.trim()),
-
-  // Subword tokenization (simplified BPE-like)
-  SUBWORD: (text: string) => {
-    const words = text.match(/\b\w+\b/g) || [];
-    const subwords: string[] = [];
-
-    for (const word of words) {
-      if (word.length <= 4) {
-        subwords.push(word);
-      } else {
-        // Split longer words into subwords
-        for (let i = 0; i < word.length; i += 3) {
-          subwords.push(word.slice(i, i + 3));
-        }
-      }
-    }
-    return subwords;
-  },
-};
-
-// Safe tokenization with error handling
-const safeTokenize = (
-  text: string,
-  method: TokenizationMethod = "WORD"
-): string[] => {
-  try {
-    if (!text || typeof text !== "string") return [];
-
-    // Sanitize text to prevent injection attacks
-    const sanitized = text
-      .replace(/[<>]/g, "") // Remove potential HTML tags
-      .replace(/javascript:/gi, "") // Remove javascript: URLs
-      .replace(/on\w+\s*=/gi, "") // Remove event handlers
-      .trim();
-
-    const tokenizer = TokenizationMethods[method];
-    if (!tokenizer) throw new Error(`Unknown tokenization method: ${method}`);
-
-    return tokenizer(sanitized);
-  } catch (error) {
-    console.warn("Tokenization error:", error);
-    return text.split(/\s+/).filter((t) => t.length > 0);
-  }
-};
-
-// Comprehensive token analysis
-const analyzeTokens = (
-  originalText: string,
-  optimizedText: string
-): Record<string, TokenAnalysis> => {
-  const methods: TokenizationMethod[] = [
-    "WORD",
-    "GPT_APPROX",
-    "CHARACTER",
-    "SENTENCE",
-    "SUBWORD",
-  ];
-  const analysis: Record<string, TokenAnalysis> = {};
-
-  for (const method of methods) {
-    const originalTokens = safeTokenize(originalText, method);
-    const optimizedTokens = safeTokenize(optimizedText, method);
-
-    analysis[method] = {
-      original: originalTokens.length,
-      optimized: optimizedTokens.length,
-      reduction:
-        originalTokens.length > 0
-          ? Math.round(
-              ((originalTokens.length - optimizedTokens.length) /
-                originalTokens.length) *
-                100
-            )
-          : 0,
-      tokens: {
-        original: originalTokens,
-        optimized: optimizedTokens,
-      },
-    };
-  }
-
-  return analysis;
-};
-
-// Main optimization function with comprehensive token analysis
-const superOptimizePrompt = (rawInput: string): OptimizationResult => {
+const superOptimizePrompt = (
+  rawInput: string
+): OptimizationResult & {
+  secretDetections: SecretDetection[];
+} => {
   const lines = rawInput.split("\n");
   const output: string[] = [];
   let originalWords = 0;
@@ -272,8 +205,10 @@ const superOptimizePrompt = (rawInput: string): OptimizationResult => {
   let linesProcessed = 0;
   let codeLines = 0;
   let secretsMasked = 0;
+  const allSecretDetections: SecretDetection[] = [];
 
-  for (let line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const trimmed = line.trim();
     originalWords += (trimmed.match(/\b\w+\b/g) || []).length;
 
@@ -283,36 +218,33 @@ const superOptimizePrompt = (rawInput: string): OptimizationResult => {
     }
 
     if (isLikelyCode(trimmed)) {
-      const masked = maskSecrets(trimmed);
-      if (masked !== trimmed) secretsMasked++;
-      output.push(masked);
+      const { maskedText, detections } = detectAndMaskSecrets(trimmed, i + 1);
+      console.log("Detection <=======", detections);
+      allSecretDetections.push(...detections);
+
+      if (detections.length > 0) secretsMasked += detections.length;
+      output.push(maskedText);
       codeLines++;
-      optimizedWords += (masked.match(/\b\w+\b/g) || []).length;
+      optimizedWords += (maskedText.match(/\b\w+\b/g) || []).length;
       continue;
     }
 
     linesProcessed++;
-
-    // Multi-pass optimization
     const sentences = smartTokenize(trimmed);
     const collapsed = collapseRedundancy(sentences);
-
     let result = collapsed.join(". ");
 
-    // Final cleanup
     result = result
       .replace(/\s+/g, " ")
       .replace(/\s([.,!?;:])/g, "$1")
       .replace(/\bi\b/g, "I")
       .trim();
 
-    // Capitalize sentences properly
     result = result.replace(
       /(^|\. )([a-z])/g,
       (_, prefix, letter) => prefix + letter.toUpperCase()
     );
 
-    // Use original if optimization made it too short or unclear
     const finalResult =
       result.length < 3 || result.split(" ").length < 2 ? trimmed : result;
     output.push(finalResult);
@@ -320,9 +252,6 @@ const superOptimizePrompt = (rawInput: string): OptimizationResult => {
   }
 
   const optimizedText = output.join("\n").trim();
-
-  // Comprehensive token analysis
-  const tokenAnalysis = analyzeTokens(rawInput, optimizedText);
 
   const stats: OptimizationStats = {
     originalWords,
@@ -339,8 +268,7 @@ const superOptimizePrompt = (rawInput: string): OptimizationResult => {
       optimizedWords > 0
         ? Math.round((optimizedWords / originalWords) * 100)
         : 100,
-    tokens: tokenAnalysis,
-    // Character-level stats
+    tokens: {},
     originalChars: rawInput.length,
     optimizedChars: optimizedText.length,
     charReduction:
@@ -349,23 +277,179 @@ const superOptimizePrompt = (rawInput: string): OptimizationResult => {
             ((rawInput.length - optimizedText.length) / rawInput.length) * 100
           )
         : 0,
+    preservedLines: 0,
   };
 
   return {
     optimized: optimizedText,
     stats,
+    secretDetections: allSecretDetections,
   };
+};
+
+const SecretWarningModal: React.FC<{
+  detections: SecretDetection[];
+  onClose: () => void;
+  onProceed: () => void;
+  onCancel: () => void;
+}> = ({ detections, onClose, onProceed, onCancel }) => {
+  const [showDetails, setShowDetails] = useState(false);
+
+  const highRiskCount = detections.filter((d) => d.severity === "high").length;
+  const mediumRiskCount = detections.filter(
+    (d) => d.severity === "medium"
+  ).length;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+        <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-8 h-8" />
+              <div>
+                <h2 className="text-2xl font-bold">Security Warning</h2>
+                <p className="text-red-100">
+                  Potential secrets detected in your text
+                </p>
+              </div>
+            </div>
+            <button onClick={onClose} className="text-white hover:text-red-200">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 overflow-y-auto max-h-96">
+          <div className="mb-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+                {highRiskCount} High Risk
+              </div>
+              <div className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
+                {mediumRiskCount} Medium Risk
+              </div>
+            </div>
+
+            <p className="text-gray-700 mb-4">
+              We detected {detections.length} potential secret
+              {detections.length !== 1 ? "s" : ""} in your text. These will be
+              automatically masked with asterisks (*) for security.
+            </p>
+
+            <div className="flex items-center gap-2 mb-4">
+              <button
+                onClick={() => setShowDetails(!showDetails)}
+                className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
+              >
+                {showDetails ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+                {showDetails ? "Hide" : "Show"} Details
+              </button>
+            </div>
+
+            {showDetails && (
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3 max-h-48 overflow-y-auto">
+                {detections.map((detection, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start gap-3 p-3 bg-white rounded border-l-4 border-red-300"
+                  >
+                    <div
+                      className={`w-3 h-3 rounded-full flex-shrink-0 mt-1 ${
+                        detection.severity === "high"
+                          ? "bg-red-500"
+                          : "bg-orange-500"
+                      }`}
+                    ></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-gray-900">
+                          {detection.type}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          Line {detection.line}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-600 font-mono bg-gray-100 px-2 py-1 rounded">
+                        {detection.pattern}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <Shield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-blue-900 mb-1">
+                  Security Measures
+                </h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>
+                    • Detected secrets will be replaced with asterisks (*)
+                  </li>
+                  <li>• Original structure and functionality preserved</li>
+                  <li>• No sensitive data will be stored or transmitted</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 px-6 py-4 flex gap-3 justify-end">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onProceed}
+            className="px-6 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 font-medium flex items-center gap-2"
+          >
+            <Shield className="w-4 h-4" />
+            Proceed with Masking
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const SuperPromptOptimizer: React.FC = () => {
   const [input, setInput] = useState<string>("");
-  const [result, setResult] = useState<OptimizationResult | null>(null);
+  const [result, setResult] = useState<
+    (OptimizationResult & { secretDetections: SecretDetection[] }) | null
+  >(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showStats, setShowStats] = useState<boolean>(true);
-  const [showTokens, setShowTokens] = useState<boolean>(false);
-  // const [selectedTokenMethod, _] =
-  //   useState<TokenizationMethod>("WORD");
   const [copyFeedback, setCopyFeedback] = useState<string>("");
+  const [pendingOptimization, setPendingOptimization] = useState<string>("");
+  const [showSecretWarning, setShowSecretWarning] = useState<boolean>(false);
+  const [secretDetections, setSecretDetections] = useState<SecretDetection[]>(
+    []
+  );
+
+  const checkForSecrets = (text: string): SecretDetection[] => {
+    const lines = text.split("\n");
+    const allDetections: SecretDetection[] = [];
+
+    lines.forEach((line, index) => {
+      if (isLikelyCode(line.trim())) {
+        const { detections } = detectAndMaskSecrets(line, index + 1);
+        allDetections.push(...detections);
+      }
+    });
+
+    return allDetections;
+  };
 
   const handleOptimize = (): void => {
     if (!input.trim()) {
@@ -373,15 +457,42 @@ const SuperPromptOptimizer: React.FC = () => {
       return;
     }
 
+    // Check for secrets before optimization
+    const detectedSecrets = checkForSecrets(input);
+
+    if (detectedSecrets.length > 0) {
+      setSecretDetections(detectedSecrets);
+      setPendingOptimization(input);
+      setShowSecretWarning(true);
+      return;
+    }
+
+    // Proceed with optimization if no secrets detected
+    proceedWithOptimization(input);
+  };
+
+  const proceedWithOptimization = (textToOptimize: string): void => {
     setIsLoading(true);
     setCopyFeedback("");
 
-    // Realistic processing time
     setTimeout(() => {
-      const optimizationResult = superOptimizePrompt(input);
+      const optimizationResult = superOptimizePrompt(textToOptimize);
       setResult(optimizationResult);
       setIsLoading(false);
     }, 1200);
+  };
+
+  const handleSecretWarningProceed = (): void => {
+    setShowSecretWarning(false);
+    proceedWithOptimization(pendingOptimization);
+    setPendingOptimization("");
+    setSecretDetections([]);
+  };
+
+  const handleSecretWarningCancel = (): void => {
+    setShowSecretWarning(false);
+    setPendingOptimization("");
+    setSecretDetections([]);
   };
 
   const copyToClipboard = async (): Promise<void> => {
@@ -412,6 +523,7 @@ It would be awesome if you could also maybe suggest some recommendations for imp
 
 Here's some sample code that shouldn't be optimized:
 const API_KEY = "sk_test_1234567890abcdef";
+const DATABASE_PASSWORD = "mySecretPassword123";
 function getData() {
   return fetch('/api/data');
 }`);
@@ -420,18 +532,26 @@ function getData() {
   const inputWordCount: number = input
     .split(/\s+/)
     .filter((w) => w.length > 0).length;
-  // const _: string[] = safeTokenize(input, selectedTokenMethod);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 flex items-center justify-center p-4">
+      {showSecretWarning && (
+        <SecretWarningModal
+          detections={secretDetections}
+          onClose={handleSecretWarningCancel}
+          onProceed={handleSecretWarningProceed}
+          onCancel={handleSecretWarningCancel}
+        />
+      )}
+
       <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-8 shadow-2xl border border-white/30 max-w-7xl w-full">
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-3">
             ⚡ Super Prompt Optimizer
           </h1>
           <p className="text-slate-600 text-xl mb-4">
-            Advanced AI-powered text optimization with comprehensive
-            tokenization (TypeScript)
+            Advanced AI-powered text optimization with secret detection &
+            security warnings
           </p>
           <div className="flex justify-center gap-4 mb-4">
             <button
@@ -445,12 +565,6 @@ function getData() {
               className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm transition-colors"
             >
               📊 {showStats ? "Hide" : "Show"} Stats
-            </button>
-            <button
-              onClick={() => setShowTokens(!showTokens)}
-              className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg text-sm transition-colors"
-            >
-              🔢 {showTokens ? "Hide" : "Show"} Tokens
             </button>
             <button
               onClick={clearAll}
@@ -517,6 +631,31 @@ function getData() {
                     {result.optimized}
                   </pre>
                 </div>
+
+                {result.secretDetections.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <h4 className="font-semibold text-amber-900 mb-2 flex items-center gap-2">
+                      <Shield className="w-4 h-4" />
+                      🔒 Security Report
+                    </h4>
+                    <p className="text-amber-800 text-sm mb-2">
+                      {result.secretDetections.length} secret
+                      {result.secretDetections.length !== 1 ? "s" : ""} detected
+                      and masked
+                    </p>
+                    <div className="text-xs text-amber-700 space-y-1">
+                      {result.secretDetections.map((detection, index) => (
+                        <div
+                          key={index}
+                          className="bg-amber-100 rounded px-2 py-1"
+                        >
+                          Line {detection.line}: {detection.type} (
+                          {detection.severity} risk)
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {showStats && (
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -627,8 +766,8 @@ function getData() {
                 <span className="text-lg">🛡️</span> Security Protection
               </div>
               <div className="text-indigo-600">
-                Detects and preserves code while masking API keys, passwords,
-                and secrets
+                Detects and masks API keys, passwords, and secrets with security
+                warnings
               </div>
             </div>
             <div className="space-y-2">
@@ -636,8 +775,39 @@ function getData() {
                 <span className="text-lg">📈</span> Performance Metrics
               </div>
               <div className="text-indigo-600">
-                Detailed analytics on word reduction, efficiency, and processing
+                Detailed analytics on word reduction, efficiency, and security
                 statistics
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Security Features Info */}
+        <div className="mt-6 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl p-6">
+          <h4 className="font-semibold text-red-900 mb-4 text-lg flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5" />
+            🔐 New: Advanced Security Detection
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="space-y-2">
+              <div className="font-medium text-red-800">
+                Real-time Detection
+              </div>
+              <div className="text-red-600">
+                Automatically scans for API keys, passwords, tokens, and
+                connection strings
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="font-medium text-red-800">Smart Warnings</div>
+              <div className="text-red-600">
+                Interactive alerts with severity levels and detailed breakdowns
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="font-medium text-red-800">Safe Processing</div>
+              <div className="text-red-600">
+                Masks sensitive data while preserving code functionality
               </div>
             </div>
           </div>

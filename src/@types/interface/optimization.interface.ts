@@ -8,6 +8,7 @@ export interface OptimizationStats {
   codeLines: number;
   secretsMasked: number;
   totalLines: number;
+  preservedLines: number;
   efficiency: number;
   tokens: Record<string, TokenAnalysis>;
   originalChars: number;
