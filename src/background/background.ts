@@ -37,6 +37,7 @@ chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
       });
 
       sendResponse({ optimized: optimizedPrompt, tokensSaved });
+      console.log(output);
     } catch (err) {
       console.error("Error during optimization:", err);
       sendResponse({ optimized: message.prompt, tokensSaved: 0 });
