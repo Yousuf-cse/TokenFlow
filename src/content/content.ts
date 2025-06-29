@@ -2,13 +2,15 @@ import findPromptInputBox from "../utils/findPromptInputBox";
 import getPromptInputValue from "../utils/getPromptInputValue";
 import setPromptInputValue from "../utils/setPromptInputValue";
 import { findSubmitButton } from "../utils/findSubmitButton";
-import showToast  from "../components/animations/showToast"
+import showToast from "../components/animations/showToast";
 
 let currentButton: HTMLElement | null = null;
 let observer: MutationObserver | null = null;
 let isOptimizing = false;
 let skipNextClick = false;
+let isBound = false;
 
+// --- Main logic ---
 const handleSubmit = async () => {
   const inputBox = findPromptInputBox();
   if (!inputBox) {
@@ -34,9 +36,11 @@ const handleSubmit = async () => {
 
     console.log("Optimized prompt:", response);
     setPromptInputValue(inputBox, response.optimized);
+
     if (response.tokensSaved) {
       showToast(`Saved ${response.tokensSaved} tokens ✅`);
     }
+
     isOptimizing = false;
 
     setTimeout(() => {
@@ -46,6 +50,7 @@ const handleSubmit = async () => {
   });
 };
 
+// --- Events ---
 const handleClick = (e: MouseEvent) => {
   if (!currentButton) return;
   const target = e.target as HTMLElement;
@@ -78,7 +83,11 @@ const handleKeydown = (e: KeyboardEvent) => {
   }
 };
 
+// --- Observer & Binding ---
 const observeAndBind = () => {
+  if (isBound) return;
+  isBound = true;
+
   currentButton = findSubmitButton();
   if (currentButton) {
     console.log("Initial submit button detected");
@@ -99,18 +108,44 @@ const observeAndBind = () => {
 };
 
 const cleanup = () => {
+  if (!isBound) return;
+  isBound = false;
+
   document.removeEventListener("click", handleClick, true);
   document.removeEventListener("keydown", handleKeydown, true);
   observer?.disconnect();
 };
 
+// --- Toggle Watcher ---
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === "local" && "isEnabled" in changes) {
+    const newValue = changes.isEnabled.newValue;
+    console.log("Toggle changed:", newValue);
+
+    if (newValue === false) {
+      cleanup();
+    } else {
+      observeAndBind();
+    }
+  }
+});
+
+// --- Init ---
 window.addEventListener("load", () => {
-  cleanup();
-  observeAndBind();
+  cleanup(); // Clean before setup
+
+  chrome.storage.local.get("isEnabled", (res) => {
+    if (res.isEnabled !== false) {
+      observeAndBind(); // Default to enabled
+    } else {
+      console.log("Extension is disabled by user.");
+    }
+  });
 });
 
 window.addEventListener("beforeunload", cleanup);
 
+// --- Background init ping ---
 chrome.runtime.sendMessage({ type: "start-extension" }, (response) => {
   if (chrome.runtime.lastError) {
     console.error("Start-extension message failed:", chrome.runtime.lastError.message);

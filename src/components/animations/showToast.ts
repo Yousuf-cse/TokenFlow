@@ -4,8 +4,8 @@ const showToast = (message: string) => {
 
   Object.assign(toast.style, {
     position: "fixed",
-    bottom: "20px",
-    right: "20px",
+    top: "60px",
+    right: "30px",
     background: "#222",
     color: "#fff",
     padding: "10px 16px",
