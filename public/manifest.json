@@ -1,24 +1,28 @@
 {
-    "manifest_version": 3,
-    "name": "PromptRim",   
-    "version": "0.0.1",
-    "description": "A Chrome extension to enhance your prompt engineering experience.",
-    "action": {
-        "default_popup": "index.html"
-    },
-    "permissions": [
-        "storage",
-        "activeTab",
-        "scripting"
-    ],
-    "background": {
-        "service_worker": "background.js",
-        "type": "module"
-    },
-    "content_scripts": [
-        {
-            "matches": ["<all_urls>"],
-            "js": ["content.js"]
-        }
-    ]
+  "manifest_version": 3,
+  "name": "TokenFlow",
+  "version": "0.0.1",
+  "description": "A Chrome extension that optimizes prompts to save tokens, reduce emissions, and help the planet.",
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": "icon/default.jpg"
+  },
+  "icons": {
+    "128": "icon/default.jpg"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
 }
