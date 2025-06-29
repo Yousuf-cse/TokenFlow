@@ -2,6 +2,7 @@ import findPromptInputBox from "../utils/findPromptInputBox";
 import getPromptInputValue from "../utils/getPromptInputValue";
 import setPromptInputValue from "../utils/setPromptInputValue";
 import { findSubmitButton } from "../utils/findSubmitButton";
+import showToast  from "../components/animations/showToast"
 
 let currentButton: HTMLElement | null = null;
 let observer: MutationObserver | null = null;
@@ -32,7 +33,10 @@ const handleSubmit = async () => {
     }
 
     console.log("Optimized prompt:", response);
-    setPromptInputValue(inputBox, response);
+    setPromptInputValue(inputBox, response.optimized);
+    if (response.tokensSaved) {
+      showToast(`Saved ${response.tokensSaved} tokens ✅`);
+    }
     isOptimizing = false;
 
     setTimeout(() => {

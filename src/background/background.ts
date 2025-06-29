@@ -36,11 +36,12 @@ chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
         });
       });
 
-      sendResponse(optimizedPrompt);
+      sendResponse({ optimized: optimizedPrompt, tokensSaved });
     } catch (err) {
       console.error("Error during optimization:", err);
-      sendResponse(message.prompt);
+      sendResponse({ optimized: message.prompt, tokensSaved: 0 });
     }
+
     return true;
   }
 });
